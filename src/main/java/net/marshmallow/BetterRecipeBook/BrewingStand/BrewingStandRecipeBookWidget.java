@@ -21,6 +21,7 @@ import net.minecraft.client.gui.widget.TexturedButtonWidget;
 import net.minecraft.client.gui.widget.ToggleButtonWidget;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.potion.Potion;
@@ -252,26 +253,38 @@ public class BrewingStandRecipeBookWidget extends DrawableHelper implements Draw
 
     private void refreshResults(boolean resetCurrentPage) {
         assert currentTab != null;
-        List<BrewingResult> results = recipeBook.getResultsForCategory(currentTab.getGroup());
+        LinkedHashMap<Item, List<BrewingResult>> results = recipeBook.getResultsForCategory(currentTab.getGroup());
 
         assert this.searchField != null;
         String string = this.searchField.getText();
-        if (!string.isEmpty()) {
-            results.removeIf(itemStack -> !itemStack.itemStack.getName().getString().toLowerCase(Locale.ROOT).contains(string.toLowerCase(Locale.ROOT)));
-        }
-
-        if (this.recipeBook.isFilteringCraftable()) {
-            results.removeIf((brewingResult) -> !brewingResult.hasMaterials(currentTab.getGroup(), brewingStandScreenHandler));
-        }
-
-        List<BrewingResult> tempResults = Lists.newArrayList(results);
-
-        for (BrewingResult brewingResult : tempResults) {
-            if (BetterRecipeBook.pinnedRecipeManager.hasPotion(brewingResult.recipe)) {
-                results.remove(brewingResult);
-                results.add(0, brewingResult);
+        for (Item item : results.keySet()) {
+            boolean hasMatching = false;
+            boolean hasBrewable = false;
+            for (BrewingResult brewingResult : results.get(item)) {
+                if (this.recipeBook.isFilteringCraftable()) {
+                    if (brewingResult.hasMaterials(currentTab.getGroup(), brewingStandScreenHandler)) {
+                        hasBrewable = true;
+                    }
+                }
+                if (!string.isEmpty()) {
+                    if (brewingResult.itemStack.getName().getString().toLowerCase(Locale.ROOT).contains(string.toLowerCase(Locale.ROOT))) {
+                        hasMatching = true;
+                    }
+                }
+            }
+            if (hasMatching || hasBrewable) {
+                results.remove(item);
             }
         }
+
+        // List<BrewingResult> tempResults = Lists.newArrayList(results);
+
+        // for (BrewingResult brewingResult : tempResults) {
+        //     if (BetterRecipeBook.pinnedRecipeManager.hasPotion(brewingResult.recipe)) {
+        //         results.remove(brewingResult);
+        //         results.add(0, brewingResult);
+        //     }
+        // }
 
         this.recipesArea.setResults(results, resetCurrentPage, currentTab.getGroup());
     }

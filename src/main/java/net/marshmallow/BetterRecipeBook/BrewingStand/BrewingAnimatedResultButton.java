@@ -31,7 +31,7 @@ import java.util.List;
 public class BrewingAnimatedResultButton extends ClickableWidget {
     private float time;
     private static final Identifier BACKGROUND_TEXTURE = new Identifier("textures/gui/recipe_book.png");
-    private BrewingResult potionRecipe;
+    private List<BrewingResult> potionRecipes;
     private BrewingRecipeBookGroup group;
     private BrewingStandScreenHandler brewingStandScreenHandler;
 
@@ -39,8 +39,8 @@ public class BrewingAnimatedResultButton extends ClickableWidget {
         super(0, 0, 25, 25, LiteralText.EMPTY);
     }
 
-    public void showPotionRecipe(BrewingResult potionRecipe, BrewingRecipeBookGroup group, BrewingStandScreenHandler brewingStandScreenHandler) {
-        this.potionRecipe = potionRecipe;
+    public void showPotionRecipe(List<BrewingResult> potionRecipes, BrewingRecipeBookGroup group, BrewingStandScreenHandler brewingStandScreenHandler) {
+        this.potionRecipes = potionRecipes;
         this.group = group;
         this.brewingStandScreenHandler = brewingStandScreenHandler;
     }
@@ -55,7 +55,18 @@ public class BrewingAnimatedResultButton extends ClickableWidget {
 
         int i;
         int j;
-        if (BetterRecipeBook.pinnedRecipeManager.hasPotion(potionRecipe.recipe)) {
+        boolean hasPinned = false;
+        boolean hasMaterials = false;
+        for (BrewingResult potionRecipe : potionRecipes) {
+            if (BetterRecipeBook.pinnedRecipeManager.hasPotion(potionRecipe.recipe)) {
+                hasPinned = true;
+            }
+            if (potionRecipe.hasMaterials(group, brewingStandScreenHandler)) {
+                hasMaterials = true;
+            }
+        }
+
+        if (hasPinned) {
             RenderSystem.setShaderTexture(0, new Identifier("betterrecipebook:textures/gui/pinned.png"));
             i = 25;
             j = 0;
@@ -65,7 +76,7 @@ public class BrewingAnimatedResultButton extends ClickableWidget {
             j = 206;
         }
 
-        if (potionRecipe.hasMaterials(group, brewingStandScreenHandler)) {
+        if (hasMaterials) {
             i -= 25;
         }
 
@@ -75,8 +86,8 @@ public class BrewingAnimatedResultButton extends ClickableWidget {
 
         matrixStack.push();
         matrixStack.method_34425(matrices.peek().getModel().copy()); // No idea what this does
-        minecraftClient.getItemRenderer().renderInGuiWithOverrides(potionRecipe.itemStack, this.x + k, this.y + k); // Why do we do this twice?
-        minecraftClient.getItemRenderer().renderGuiItemOverlay(MinecraftClient.getInstance().textRenderer, potionRecipe.itemStack, this.x + k, this.y + k); // ^
+        minecraftClient.getItemRenderer().renderInGuiWithOverrides(potionRecipes.get(0).itemStack, this.x + k, this.y + k); // Why do we do this twice?
+        minecraftClient.getItemRenderer().renderGuiItemOverlay(MinecraftClient.getInstance().textRenderer, potionRecipes.get(0).itemStack, this.x + k, this.y + k); // ^
         RenderSystem.enableDepthTest();
         matrixStack.pop();
         RenderSystem.applyModelViewMatrix();
@@ -84,7 +95,7 @@ public class BrewingAnimatedResultButton extends ClickableWidget {
     }
 
     public BrewingResult getRecipe() {
-        return potionRecipe;
+        return potionRecipes.get(0);
     }
 
     public void setPos(int x, int y) {
@@ -93,7 +104,7 @@ public class BrewingAnimatedResultButton extends ClickableWidget {
     }
 
     public void appendNarrations(NarrationMessageBuilder builder) {
-        Potion inputPotion = (Potion) ((BrewingRecipeRegistryRecipeAccessor<?>) this.potionRecipe.recipe).getInput();
+        Potion inputPotion = (Potion) ((BrewingRecipeRegistryRecipeAccessor<?>) this.potionRecipes.get(0)).getInput();
 
         Identifier identifier = Registry.POTION.getId(inputPotion);
         ItemStack inputStack;
@@ -114,8 +125,8 @@ public class BrewingAnimatedResultButton extends ClickableWidget {
     public List<Text> getTooltip() {
         List<Text> list = Lists.newArrayList();
 
-        list.add(potionRecipe.itemStack.getName());
-        PotionUtil.buildTooltip(potionRecipe.itemStack, list, 1);
+        list.add(potionRecipes.get(0).itemStack.getName());
+        PotionUtil.buildTooltip(potionRecipes.get(0).itemStack, list, 1);
         list.add(new LiteralText(""));
 
         Formatting colour = Formatting.DARK_GRAY;
@@ -123,11 +134,11 @@ public class BrewingAnimatedResultButton extends ClickableWidget {
             colour = Formatting.WHITE;
         }
 
-        list.add(new LiteralText(((BrewingRecipeRegistryRecipeAccessor<?>) potionRecipe.recipe).getIngredient().getMatchingStacks()[0].getName().getString()).formatted(colour));
+        list.add(new LiteralText(((BrewingRecipeRegistryRecipeAccessor<?>) potionRecipes.get(0).recipe).getIngredient().getMatchingStacks()[0].getName().getString()).formatted(colour));
 
         list.add(new LiteralText("+").formatted(Formatting.DARK_GRAY));
 
-        Potion inputPotion = (Potion) ((BrewingRecipeRegistryRecipeAccessor<?>) this.potionRecipe.recipe).getInput();
+        Potion inputPotion = (Potion) ((BrewingRecipeRegistryRecipeAccessor<?>) this.potionRecipes.get(0).recipe).getInput();
 
         Identifier identifier = Registry.POTION.getId(inputPotion);
         ItemStack inputStack;
@@ -147,7 +158,7 @@ public class BrewingAnimatedResultButton extends ClickableWidget {
 
         list.add(new LiteralText(inputStack.getName().getString()).formatted(colour));
 
-        if (BetterRecipeBook.pinnedRecipeManager.hasPotion(this.potionRecipe.recipe)) {
+        if (BetterRecipeBook.pinnedRecipeManager.hasPotion(this.potionRecipes.get(0).recipe)) {
             list.add(new TranslatableText("betterrecipebook.gui.pin.remove"));
         } else {
             list.add(new TranslatableText("betterrecipebook.gui.pin.add"));

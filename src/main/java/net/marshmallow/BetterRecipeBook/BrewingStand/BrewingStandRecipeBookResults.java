@@ -7,14 +7,14 @@ import net.marshmallow.BetterRecipeBook.BetterRecipeBook;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.widget.ToggleButtonWidget;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.item.Item;
 import net.minecraft.screen.BrewingStandScreenHandler;
 
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 @Environment(EnvType.CLIENT)
 public class BrewingStandRecipeBookResults {
-    private List<BrewingResult> recipeCollection;
+    private LinkedHashMap<Item, List<BrewingResult>> recipeCollection;
     public final List<BrewingAnimatedResultButton> resultButtons = Lists.newArrayListWithCapacity(20);
     private int pageCount;
     private int currentPage;
@@ -48,7 +48,7 @@ public class BrewingStandRecipeBookResults {
         this.prevPageButton.setTextureUV(1, 208, 13, 18, BrewingStandRecipeBookWidget.TEXTURE);
     }
 
-    public void setResults(List<BrewingResult> recipeCollection, boolean resetCurrentPage, BrewingRecipeBookGroup group) {
+    public void setResults(LinkedHashMap<Item, List<BrewingResult>> recipeCollection, boolean resetCurrentPage, BrewingRecipeBookGroup group) {
         this.recipeCollection = recipeCollection;
         this.group = group;
 
@@ -63,10 +63,11 @@ public class BrewingStandRecipeBookResults {
     private void refreshResultButtons() {
         int i = 20 * this.currentPage;
 
+        List<Item> keys = new ArrayList<>(recipeCollection.keySet());
         for(int j = 0; j < this.resultButtons.size(); ++j) {
             BrewingAnimatedResultButton animatedResultButton = this.resultButtons.get(j);
             if (i + j < this.recipeCollection.size()) {
-                BrewingResult output = this.recipeCollection.get(i + j);
+                List<BrewingResult> output = this.recipeCollection.get(keys.get(i + j));
                 animatedResultButton.showPotionRecipe(output, group, brewingStandScreenHandler);
                 animatedResultButton.visible = true;
             } else {
