@@ -8,6 +8,8 @@ import me.shedaniel.autoconfig.annotation.ConfigEntry;
 public class Config implements ConfigData {
     public boolean enableBook = true;
 
+    public boolean enablePinning = true;
+
     @ConfigEntry.Gui.Tooltip()
     public boolean settingsButton = true;
 
@@ -15,7 +17,6 @@ public class Config implements ConfigData {
     public boolean darkMode = false;
 
     public boolean keepCentered = true;
-    public boolean statusEffects = true;
 
     @ConfigEntry.Category("newRecipes")
     @ConfigEntry.Gui.TransitiveObject()
