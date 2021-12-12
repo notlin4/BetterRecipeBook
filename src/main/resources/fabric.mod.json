@@ -19,7 +19,7 @@
   "icon": "assets/betterrecipebook/icon.png",
   "environment": "*",
   "entrypoints": {
-    "main": [
+    "client": [
       "net.marshmallow.BetterRecipeBook.BetterRecipeBook"
     ],
     "modmenu": [
