@@ -31,7 +31,8 @@
     "Pins.RemoveButtonFocus",
     "Pins.Tooltip",
     "UnGroup.Search",
-    "UnGroup.SplitGrouped"
+    "UnGroup.SplitGrouped",
+    "EnchantingTable"
   ],
   "injectors": {
     "defaultRequire": 1

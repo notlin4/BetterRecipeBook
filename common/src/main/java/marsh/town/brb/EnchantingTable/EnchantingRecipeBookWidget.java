@@ -1,14 +1,13 @@
-package marsh.town.brb.BrewingStand;
+package marsh.town.brb.EnchantingTable;
 
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import marsh.town.brb.BetterRecipeBook;
+import marsh.town.brb.BrewingStand.*;
 import marsh.town.brb.Config.Config;
 import marsh.town.brb.RecipeGroupButtonWidget;
 import me.shedaniel.autoconfig.AutoConfig;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -28,6 +27,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.StackedContents;
 import net.minecraft.world.inventory.BrewingStandMenu;
 import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.EnchantmentMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -44,20 +44,19 @@ import java.util.Objects;
 import static marsh.town.brb.BrewingStand.PlatformPotionUtil.getFrom;
 import static marsh.town.brb.BrewingStand.PlatformPotionUtil.getIngredient;
 
-@Environment(EnvType.CLIENT)
-public class RecipeBookWidget extends GuiComponent implements Widget, GuiEventListener, NarratableEntry {
+public class EnchantingRecipeBookWidget extends GuiComponent implements Widget, GuiEventListener, NarratableEntry {
     public static final ResourceLocation TEXTURE = new ResourceLocation("textures/gui/recipe_book.png");
     private static final ResourceLocation BUTTON_TEXTURE = new ResourceLocation("brb:textures/gui/buttons.png");
-    protected BrewingStandMenu brewingStandScreenHandler;
+    protected EnchantmentMenu enchantmentMenu;
     Minecraft client;
     private int parentWidth;
     private int parentHeight;
     private boolean narrow;
-    ClientRecipeBook recipeBook;
+    EnchantingClientRecipeBook recipeBook;
     private int leftOffset;
-    protected final RecipeBookGhostSlots ghostSlots = new RecipeBookGhostSlots();
+    protected final EnchantingRecipeBookGhostSlots ghostSlots = new EnchantingRecipeBookGhostSlots();
     private boolean open;
-    private final RecipeBookResults recipesArea = new RecipeBookResults();
+    private final EnchantingRecipeBookResults recipesArea = new EnchantingRecipeBookResults();
     @Nullable
     private EditBox searchField;
     private final StackedContents recipeFinder = new StackedContents();
@@ -69,22 +68,22 @@ public class RecipeBookWidget extends GuiComponent implements Widget, GuiEventLi
     private boolean searching;
     protected ImageButton settingsButton;
     private String searchText;
-    private static final Component TOGGLE_CRAFTABLE_RECIPES_TEXT;
+    private static final Component TOGGLE_ENCHANTABLE_RECIPES_TEXT;
     private static final Component TOGGLE_ALL_RECIPES_TEXT;
     private static final Component OPEN_SETTINGS_TEXT;
     boolean doubleRefresh = true;
 
 
-    public void initialize(int parentWidth, int parentHeight, Minecraft client, boolean narrow, BrewingStandMenu brewingStandScreenHandler) {
+    public void initialize(int parentWidth, int parentHeight, Minecraft client, boolean narrow, EnchantmentMenu enchantmentMenu) {
         this.client = client;
         this.parentWidth = parentWidth;
         this.parentHeight = parentHeight;
-        this.brewingStandScreenHandler = brewingStandScreenHandler;
+        this.enchantmentMenu = enchantmentMenu;
         this.narrow = narrow;
         assert client.player != null;
-        client.player.containerMenu = brewingStandScreenHandler;
-        this.recipeBook = new ClientRecipeBook();
-        this.open = BetterRecipeBook.rememberedBrewingOpen;
+        client.player.containerMenu = enchantmentMenu;
+        this.recipeBook = new EnchantingClientRecipeBook();
+        this.open = BetterRecipeBook.rememberedEnchantingOpen;
         // this.cachedInvChangeCount = client.player.getInventory().getChangeCount();
         this.reset();
 
@@ -95,23 +94,6 @@ public class RecipeBookWidget extends GuiComponent implements Widget, GuiEventLi
         }
 
         client.keyboardHandler.setSendRepeatsToGui(true);
-    }
-
-    public ItemStack getInputStack(Result result) {
-        Potion inputPotion = getFrom(result.recipe);
-        Ingredient ingredient = getIngredient(result.recipe);
-        ResourceLocation identifier = Registry.POTION.getKey(inputPotion);
-        ItemStack inputStack;
-        if (this.currentTab.getGroup() == RecipeBookGroup.BREWING_SPLASH_POTION) {
-            inputStack = new ItemStack(Items.SPLASH_POTION);
-        } else if (this.currentTab.getGroup() == RecipeBookGroup.BREWING_LINGERING_POTION) {
-            inputStack = new ItemStack(Items.LINGERING_POTION);
-        } else {
-            inputStack = new ItemStack(Items.POTION);
-        }
-
-        inputStack.getOrCreateTag().putString("Potion", identifier.toString());
-        return inputStack;
     }
 
     public void reset() {
@@ -137,7 +119,7 @@ public class RecipeBookWidget extends GuiComponent implements Widget, GuiEventLi
         this.searchField.setVisible(true);
         this.searchField.setTextColor(16777215);
         this.searchField.setValue(string);
-        this.recipesArea.initialize(this.client, i, j, brewingStandScreenHandler);
+        this.recipesArea.initialize(this.client, i, j, enchantmentMenu);
         this.tabButtons.clear();
         this.recipeBook.setFilteringCraftable(BetterRecipeBook.rememberedBrewingToggle);
         this.toggleBrewableButton = new StateSwitchingButton(i + 110, j + 12, 26, 16, this.recipeBook.isFilteringCraftable());
@@ -174,38 +156,37 @@ public class RecipeBookWidget extends GuiComponent implements Widget, GuiEventLi
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (this.open && !Objects.requireNonNull(this.client.player).isSpectator()) {
             if (this.recipesArea.mouseClicked(mouseX, mouseY, button)) {
-                Result result = this.recipesArea.getLastClickedRecipe();
+                EnchantingResult result = this.recipesArea.getLastClickedRecipe();
                 if (result != null) {
                     if (this.currentTab == null) return false;
                     this.ghostSlots.reset();
 
-                    if (!result.hasMaterials(this.currentTab.getGroup(), brewingStandScreenHandler)) {
-                        showGhostRecipe(result, brewingStandScreenHandler.slots);
+                    if (!result.hasItem(enchantmentMenu)) {
+                        showGhostRecipe(result, enchantmentMenu.slots);
                         return false;
                     }
 
-                    ItemStack inputStack = getInputStack(result);
-                    Ingredient ingredient = getIngredient(result.recipe);
+//                    Ingredient ingredient = getIngredient(result.enchantment);
 
                     int slotIndex = 0;
                     int usedInputSlots = 0;
-                    for (Slot slot : brewingStandScreenHandler.slots) {
+                    for (Slot slot : enchantmentMenu.slots) {
                         ItemStack itemStack = slot.getItem();
 
-                        assert inputStack.getTag() != null;
-                        if (inputStack.getTag().equals(itemStack.getTag()) && inputStack.getItem().equals(itemStack.getItem())) {
-                            if (usedInputSlots <= 2) {
-                                System.out.println(usedInputSlots);
-                                assert Minecraft.getInstance().gameMode != null;
-                                Minecraft.getInstance().gameMode.handleInventoryMouseClick(brewingStandScreenHandler.containerId, brewingStandScreenHandler.getSlot(slotIndex).index, 0, ClickType.PICKUP, Minecraft.getInstance().player);
-                                Minecraft.getInstance().gameMode.handleInventoryMouseClick(brewingStandScreenHandler.containerId, brewingStandScreenHandler.getSlot(usedInputSlots).index, 0, ClickType.PICKUP, Minecraft.getInstance().player);
-                                ++usedInputSlots;
-                            }
-                        } else if (ingredient.getItems()[0].getItem().equals(slot.getItem().getItem())) {
-                            assert Minecraft.getInstance().gameMode != null;
-                            Minecraft.getInstance().gameMode.handleInventoryMouseClick(brewingStandScreenHandler.containerId, brewingStandScreenHandler.getSlot(slotIndex).index, 0, ClickType.PICKUP, Minecraft.getInstance().player);
-                            Minecraft.getInstance().gameMode.handleInventoryMouseClick(brewingStandScreenHandler.containerId, brewingStandScreenHandler.getSlot(3).index, 0, ClickType.PICKUP, Minecraft.getInstance().player);
-                        }
+//                        assert inputStack.getTag() != null;
+//                        if (inputStack.getTag().equals(itemStack.getTag()) && inputStack.getItem().equals(itemStack.getItem())) {
+//                            if (usedInputSlots <= 2) {
+//                                System.out.println(usedInputSlots);
+//                                assert Minecraft.getInstance().gameMode != null;
+//                                Minecraft.getInstance().gameMode.handleInventoryMouseClick(enchantmentMenu.containerId, enchantmentMenu.getSlot(slotIndex).index, 0, ClickType.PICKUP, Minecraft.getInstance().player);
+//                                Minecraft.getInstance().gameMode.handleInventoryMouseClick(enchantmentMenu.containerId, enchantmentMenu.getSlot(usedInputSlots).index, 0, ClickType.PICKUP, Minecraft.getInstance().player);
+//                                ++usedInputSlots;
+//                            }
+//                        } else if (ingredient.getItems()[0].getItem().equals(slot.getItem().getItem())) {
+//                            assert Minecraft.getInstance().gameMode != null;
+//                            Minecraft.getInstance().gameMode.handleInventoryMouseClick(enchantmentMenu.containerId, enchantmentMenu.getSlot(slotIndex).index, 0, ClickType.PICKUP, Minecraft.getInstance().player);
+//                            Minecraft.getInstance().gameMode.handleInventoryMouseClick(enchantmentMenu.containerId, enchantmentMenu.getSlot(3).index, 0, ClickType.PICKUP, Minecraft.getInstance().player);
+//                        }
 
                         ++slotIndex;
                     }
@@ -257,14 +238,14 @@ public class RecipeBookWidget extends GuiComponent implements Widget, GuiEventLi
         }
     }
 
-    public void showGhostRecipe(Result result, List<Slot> slots) {
-        this.ghostSlots.addSlot(getIngredient(result.recipe).getItems()[0], slots.get(3).x, slots.get(3).y);
+    public void showGhostRecipe(EnchantingResult result, List<Slot> slots) {
+//        this.ghostSlots.addSlot(getIngredient(result.enchantment).getItems()[0], slots.get(3).x, slots.get(3).y);
 
-        assert currentTab != null;
-        ItemStack inputStack = result.inputAsItemStack(currentTab.getGroup());
-        this.ghostSlots.addSlot(result.ingredient, slots.get(0).x, slots.get(0).y);
-        this.ghostSlots.addSlot(inputStack, slots.get(1).x, slots.get(1).y);
-        this.ghostSlots.addSlot(inputStack, slots.get(2).x, slots.get(2).y);
+//        assert currentTab != null;
+//        ItemStack inputStack = result.inputAsItemStack(currentTab.getGroup());
+//        this.ghostSlots.addSlot(result.ingredient, slots.get(0).x, slots.get(0).y);
+//        this.ghostSlots.addSlot(inputStack, slots.get(1).x, slots.get(1).y);
+//        this.ghostSlots.addSlot(inputStack, slots.get(2).x, slots.get(2).y);
     }
 
     private boolean toggleFilteringBrewable() {
@@ -278,27 +259,27 @@ public class RecipeBookWidget extends GuiComponent implements Widget, GuiEventLi
         if (this.currentTab == null) return;
         if (this.searchField == null) return;
 
-        List<Result> results = recipeBook.getResultsForCategory(currentTab.getGroup());
+        List<EnchantingResult> results = recipeBook.getResultsForCategory();
 
-        String string = this.searchField.getValue();
-        if (!string.isEmpty()) {
-            results.removeIf(itemStack -> !itemStack.ingredient.getHoverName().getString().toLowerCase(Locale.ROOT).contains(string.toLowerCase(Locale.ROOT)));
-        }
-
-        if (this.recipeBook.isFilteringCraftable()) {
-            results.removeIf((result) -> !result.hasMaterials(currentTab.getGroup(), brewingStandScreenHandler));
-        }
-
-        if (BetterRecipeBook.config.enablePinning) {
-            List<Result> tempResults = Lists.newArrayList(results);
-
-            for (Result result : tempResults) {
-                if (BetterRecipeBook.pinnedRecipeManager.hasPotion(result.recipe)) {
-                    results.remove(result);
-                    results.add(0, result);
-                }
-            }
-        }
+//        String string = this.searchField.getValue();
+//        if (!string.isEmpty()) {
+//            results.removeIf(itemStack -> !itemStack.enchantment.getHoverName().getString().toLowerCase(Locale.ROOT).contains(string.toLowerCase(Locale.ROOT)));
+//        }
+//
+//        if (this.recipeBook.isFilteringCraftable()) {
+//            results.removeIf((result) -> !result.hasMaterials(currentTab.getGroup(), enchantmentMenu));
+//        }
+//
+//        if (BetterRecipeBook.config.enablePinning) {
+//            List<Result> tempResults = Lists.newArrayList(results);
+//
+//            for (Result result : tempResults) {
+//                if (BetterRecipeBook.pinnedRecipeManager.hasPotion(result.recipe)) {
+//                    results.remove(result);
+//                    results.add(0, result);
+//                }
+//            }
+//        }
 
         this.recipesArea.setResults(results, resetCurrentPage, currentTab.getGroup());
     }
@@ -392,8 +373,8 @@ public class RecipeBookWidget extends GuiComponent implements Widget, GuiEventLi
     }
 
     @Override
-    public NarrationPriority narrationPriority() {
-        return this.open ? NarrationPriority.HOVERED : NarrationPriority.NONE;
+    public NarratableEntry.NarrationPriority narrationPriority() {
+        return this.open ? NarratableEntry.NarrationPriority.HOVERED : NarratableEntry.NarrationPriority.NONE;
     }
 
     public void drawTooltip(PoseStack matrices, int x, int y, int mouseX, int mouseY) {
@@ -423,14 +404,14 @@ public class RecipeBookWidget extends GuiComponent implements Widget, GuiEventLi
     }
 
     protected Component getToggleCraftableButtonText() {
-        return TOGGLE_CRAFTABLE_RECIPES_TEXT;
+        return TOGGLE_ENCHANTABLE_RECIPES_TEXT;
     }
 
     private void drawGhostSlotTooltip(PoseStack matrices, int x, int y, int mouseX, int mouseY) {
         ItemStack itemStack = null;
 
         for(int i = 0; i < this.ghostSlots.getSlotCount(); ++i) {
-            RecipeBookGhostSlots.GhostSlot ghostInputSlot = this.ghostSlots.getSlot(i);
+            EnchantingRecipeBookGhostSlots.GhostSlot ghostInputSlot = this.ghostSlots.getSlot(i);
             int j = ghostInputSlot.getX() + x;
             int k = ghostInputSlot.getY() + y;
             if (mouseX >= j && mouseY >= k && mouseX < j + 16 && mouseY < k + 16) {
@@ -459,9 +440,9 @@ public class RecipeBookWidget extends GuiComponent implements Widget, GuiEventLi
                     return true;
                 } else if (keyCode == GLFW.GLFW_KEY_F) {
                     if (BetterRecipeBook.config.enablePinning) {
-                        for (AnimatedResultButton resultButton : this.recipesArea.resultButtons) {
+                        for (EnchantingAnimatedResultButton resultButton : this.recipesArea.resultButtons) {
                             if (resultButton.isHoveredOrFocused()) {
-                                BetterRecipeBook.pinnedRecipeManager.addOrRemoveFavouritePotion(resultButton.getRecipe().recipe);
+//                                BetterRecipeBook.pinnedRecipeManager.addOrRemoveFavouritePotion(resultButton.getRecipe().enchantment);
                                 this.refreshResults(false);
                                 return true;
                             }
@@ -519,7 +500,7 @@ public class RecipeBookWidget extends GuiComponent implements Widget, GuiEventLi
 
     static {
         SEARCH_HINT_TEXT = (new TranslatableComponent("gui.recipebook.search_hint")).withStyle(ChatFormatting.ITALIC).withStyle(ChatFormatting.GRAY);
-        TOGGLE_CRAFTABLE_RECIPES_TEXT = new TranslatableComponent("brb.gui.togglePotions.brewable");
+        TOGGLE_ENCHANTABLE_RECIPES_TEXT = new TranslatableComponent("brb.gui.togglePotions.brewable");
         TOGGLE_ALL_RECIPES_TEXT = new TranslatableComponent("gui.recipebook.toggleRecipes.all");
         OPEN_SETTINGS_TEXT = new TranslatableComponent("brb.gui.settings.open");
     }

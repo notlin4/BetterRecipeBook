@@ -1,7 +1,9 @@
-package marsh.town.brb.BrewingStand;
+package marsh.town.brb;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import marsh.town.brb.BrewingStand.RecipeBookGroup;
+import marsh.town.brb.BrewingStand.RecipeBookWidget;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;

@@ -20,6 +20,7 @@ public class BetterRecipeBook {
     public static InstantCraftingManager instantCraftingManager;
 
     public static boolean rememberedBrewingOpen = true;
+    public static boolean rememberedEnchantingOpen = true;
     public static boolean rememberedBrewingToggle = false;
 
     public static final Logger LOGGER = LogManager.getLogger(MOD_ID);
